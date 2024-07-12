@@ -9,7 +9,8 @@
 static const Color BACKGROUND_COLOR = {18, 18, 18, 255};
 static const int WIN_W = 3840;
 static const int WIN_H = 2160;
-static const float ZOOM = 1.0;
+static float ZOOM = 1.0;
+static int FONT_SIZE = 20;
 
 enum LEVEL {
     ERROR,
@@ -40,6 +41,7 @@ const char* LevelStr(enum LEVEL lvl) {
         }
     }
 }
+
 void Log(enum LEVEL v, char* msg) {
     if (v <= VERBOSITY) {
         printf("[XICLOPS %s] %s", LevelStr(v), msg);
@@ -48,15 +50,49 @@ void Log(enum LEVEL v, char* msg) {
 
 int main(int argc, char** argv) {
     int cam_id = 0;
-    printf("Starting Verbosity: %d\n", VERBOSITY);
-    if (argc > 1) {
-        cam_id = atoi(argv[1]);
-    }
-    if (argc > 2) {
-        VERBOSITY = (enum LEVEL)atoi(argv[2]);
-        printf("Input Verbosity: %d\n", VERBOSITY);
-    }
     char* log_msg;
+    for (size_t i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "-z") == 0) {
+            if (i + 1 >= argc) {
+                asprintf(
+                    &log_msg, "No valid value given for option -z (zoom)\n");
+                Log(WARN, log_msg);
+                break;
+            }
+            ZOOM = atof(argv[i + 1]);
+            asprintf(&log_msg, "ZOOM updated to %f\n", ZOOM);
+            Log(DEBUG, log_msg);
+            i += 1;
+        } else if (strcmp(argv[i], "-v") == 0) {
+            if (i + 1 >= argc) {
+                asprintf(
+                    &log_msg,
+                    "No valid value given for option -v (verbosity)\n");
+                Log(WARN, log_msg);
+                break;
+            }
+            VERBOSITY = atoi(argv[i + 1]);
+            asprintf(&log_msg, "VERBOSITY updated to %d\n", VERBOSITY);
+            Log(DEBUG, log_msg);
+            i += 1;
+        } else if (strcmp(argv[i], "-c") == 0) {
+            if (i + 1 >= argc) {
+                asprintf(
+                    &log_msg,
+                    "No valid value given for option -c (camera ID)\n");
+                Log(WARN, log_msg);
+                break;
+            }
+            cam_id = atoi(argv[i + 1]);
+            asprintf(&log_msg, "cam_id updated to %d\n", cam_id);
+            Log(DEBUG, log_msg);
+            i += 1;
+        } else {
+            asprintf(&log_msg, "Unknown option: %s\n", argv[i]);
+            Log(WARN, log_msg);
+        }
+    }
+
     asprintf(&log_msg, "Opening Camera %d\n", cam_id);
     Log(INFO, log_msg);
 
@@ -121,7 +157,7 @@ int main(int argc, char** argv) {
     status += xiSetParamInt(handle, XI_PRM_LIMIT_BANDWIDTH_MODE, XI_ON);
     int bw_max;
     status += xiGetParamInt(handle, XI_PRM_HEIGHT XI_PRM_INFO_MAX, &bw_max);
-    status += xiSetParamInt(handle, XI_PRM_LIMIT_BANDWIDTH, bw_max);
+    status += xiSetParamInt(handle, XI_PRM_LIMIT_BANDWIDTH, 2664);
 
     // Set white balance
     status += xiSetParamFloat(handle, XI_PRM_WB_KR, 1.29);
@@ -169,14 +205,14 @@ int main(int argc, char** argv) {
         .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
     };
 
-    float w = WIN_W;
-    float h = WIN_H;
+    float w = WIN_W * ZOOM;
+    float h = WIN_H * ZOOM;
 
     bool got_first = false;
 
     asprintf(&log_msg, "Initializing window...\n");
     Log(INFO, log_msg);
-    InitWindow(WIN_W, WIN_H, "Xiclops");
+    InitWindow(w, h, "Xiclops");
     SetWindowPosition(100 * cam_id + 100, 200 * cam_id + 100);
     SetTargetFPS(60);
     printf("Starting render loop\n");
@@ -192,7 +228,7 @@ int main(int argc, char** argv) {
 
         asprintf(&log_msg, "Acquiring image...\n");
         Log(TRACE, log_msg);
-        status = xiGetImage(handle, 5000, &image);
+        status = xiGetImage(handle, 10000, &image);
         if (status != XI_OK) {
             printf("Failed to get image on camera 0\n");
             return 1;
@@ -226,8 +262,9 @@ int main(int argc, char** argv) {
             char* fps_msg;
             int fps = GetFPS();
             asprintf(&fps_msg, "FPS: %d", fps);
-            DrawText("Graphics: Raylib", 20, 20, 40, LIGHTGRAY);
-            DrawText(fps_msg, 20, 60, 40, LIGHTGRAY);
+            int adj_font_size = FONT_SIZE / ZOOM;
+            DrawText("Graphics: Raylib", 20, 20, adj_font_size, LIGHTGRAY);
+            DrawText(fps_msg, 20, 20 + adj_font_size, adj_font_size, LIGHTGRAY);
         }
         EndMode2D();
         EndDrawing();
