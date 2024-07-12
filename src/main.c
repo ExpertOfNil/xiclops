@@ -48,6 +48,15 @@ void Log(enum LEVEL v, char* msg) {
     }
 }
 
+void help() {
+    printf("xiclops [options]\n");
+    printf("  options:\n");
+    printf("    -h      \tShow this message\n");
+    printf("    -c int  \tCamera ID (default = 0)\n");
+    printf("    -v int  \tVerbosity level (default = 2 a.k.a INFO)\n");
+    printf("    -z float\tZoom level (new/original) (default = 1.0)\n");
+}
+
 int main(int argc, char** argv) {
     int cam_id = 0;
     char* log_msg;
@@ -57,6 +66,7 @@ int main(int argc, char** argv) {
                 asprintf(
                     &log_msg, "No valid value given for option -z (zoom)\n");
                 Log(WARN, log_msg);
+                help();
                 break;
             }
             ZOOM = atof(argv[i + 1]);
@@ -69,6 +79,7 @@ int main(int argc, char** argv) {
                     &log_msg,
                     "No valid value given for option -v (verbosity)\n");
                 Log(WARN, log_msg);
+                help();
                 break;
             }
             VERBOSITY = atoi(argv[i + 1]);
@@ -81,12 +92,16 @@ int main(int argc, char** argv) {
                     &log_msg,
                     "No valid value given for option -c (camera ID)\n");
                 Log(WARN, log_msg);
+                help();
                 break;
             }
             cam_id = atoi(argv[i + 1]);
             asprintf(&log_msg, "cam_id updated to %d\n", cam_id);
             Log(DEBUG, log_msg);
             i += 1;
+        } else if (strcmp(argv[i], "-h") == 0) {
+            help();
+            return 0;
         } else {
             asprintf(&log_msg, "Unknown option: %s\n", argv[i]);
             Log(WARN, log_msg);
