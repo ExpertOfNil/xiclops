@@ -2,9 +2,12 @@
 #include <pthread.h>
 #include <raylib.h>
 #include <raymath.h>
+#include <signal.h>
 #include <stdio.h>
 #include <time.h>
 #include <xiApi.h>
+
+static bool SEND_KILL = false;
 
 typedef struct {
     int x;
@@ -73,14 +76,14 @@ const struct timespec tp = {0, 100};
 void* get_xi_img(void* targs) {
     char* log_msg;
     while (1) {
+        if (SEND_KILL) {
+            break;
+        }
         ThreadArgs args = *(ThreadArgs*)targs;
-        pthread_mutex_lock(args.mutex);
         int status = xiGetImage(*(args.handle), 10000, args.image);
-        pthread_mutex_unlock(args.mutex);
         if (status != XI_OK) {
             printf("Failed to get image on camera 0\n");
         }
-        // pthread_barrier_wait(args->barrier);
         nanosleep(&tp, NULL);
     }
     free(log_msg);
@@ -99,7 +102,8 @@ int setupCamera(PHANDLE handle, ImageSize* img_sz) {
     status += xiSetParamInt(*handle, XI_PRM_OUTPUT_DATA_BIT_DEPTH, XI_BPP_8);
     // Set width
     int w_inc;
-    status += xiGetParamInt(*handle, XI_PRM_WIDTH XI_PRM_INFO_INCREMENT, &w_inc);
+    status +=
+        xiGetParamInt(*handle, XI_PRM_WIDTH XI_PRM_INFO_INCREMENT, &w_inc);
     asprintf(&log_msg, "Width inc: %d\n", w_inc);
     Log(DEBUG, log_msg);
     int width = (WIN_W / w_inc) * w_inc;
@@ -292,7 +296,7 @@ int main(int argc, char** argv) {
     Texture2D texture = {
         .width = width,
         .height = height,
-        .mipmaps = 4,
+        .mipmaps = 1,
         .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
     };
 
@@ -330,44 +334,17 @@ int main(int argc, char** argv) {
         asprintf(&log_msg, "Acquiring image...\n");
         Log(TRACE, log_msg);
 
-        // double rl_acq_start = GetTime();
-        //// status = xiGetImage(handle, 10000, &image);
-        //// if (status != XI_OK) {
-        ////     printf("Failed to get image on camera 0\n");
-        ////     return 1;
-        //// }
-        // double rl_acq_end = GetTime();
-
-        // asprintf(
-        //     &log_msg,
-        //     "Image Acquisition: %lf ms\n",
-        //     (rl_acq_end - rl_acq_start) * 1000);
-        // Log(TRACE, log_msg);
-
-        // asprintf(&log_msg, "Image acquired!\n");
-        // Log(TRACE, log_msg);
-        // unsigned char* pixels = (unsigned char*)image.bp;
-        // rl_img.data = pixels;
-
         // Load image to texture
         if (got_first) {
-            // asprintf(&log_msg, "Updating texture...\n");
-            // Log(TRACE, log_msg);
-            // UpdateTexture(texture, pixels);
-
-            double rl_start = GetTime();
+            double rl_update_start = GetTime();
             for (size_t i = 0; i < ndevices; ++i) {
-                pthread_mutex_lock(&mutexes[i]);
                 unsigned char* pixels = (unsigned char*)(images[i].bp);
-                pthread_mutex_unlock(&mutexes[i]);
                 UpdateTexture(textures[i], pixels);
             }
-            double rl_end = GetTime();
+            double rl_update_delta = GetTime() - rl_update_start;
 
             asprintf(
-                &log_msg,
-                "UpdateTexture: %lf ms\n",
-                (rl_end - rl_start) * 1000);
+                &log_msg, "UpdateTexture: %lf ms\n", rl_update_delta * 1000);
             Log(TRACE, log_msg);
 
             asprintf(&log_msg, "Texture updated\n");
@@ -405,18 +382,17 @@ int main(int argc, char** argv) {
         }
         EndMode2D();
         EndDrawing();
-        double rl_all_end = GetTime();
+        double rl_all_delta = GetTime() - rl_all_start;
 
-        asprintf(
-            &log_msg,
-            "Frame Time: %lf ms\n",
-            (rl_all_end - rl_all_start) * 1000);
+        asprintf(&log_msg, "Frame Time: %lf ms\n", rl_all_delta * 1000);
         Log(TRACE, log_msg);
         Log(TRACE,
             "=================================================================="
             "==============\n");
     }
+    SEND_KILL = true;
     for (size_t i = 0; i < ndevices; ++i) {
+        pthread_join(threads[i], NULL);
         xiStopAcquisition(handles[i]);
         xiCloseDevice(handles[i]);
     }
