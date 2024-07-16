@@ -150,7 +150,7 @@ int setupCamera(PHANDLE handle, ImageSize* img_sz) {
     // Set bandwidth limit to max
     status += xiSetParamInt(*handle, XI_PRM_LIMIT_BANDWIDTH_MODE, XI_ON);
     int bw_max;
-    status += xiGetParamInt(*handle, XI_PRM_HEIGHT XI_PRM_INFO_MAX, &bw_max);
+    status += xiGetParamInt(*handle, XI_PRM_LIMIT_BANDWIDTH XI_PRM_INFO_MAX, &bw_max);
     status += xiSetParamInt(*handle, XI_PRM_LIMIT_BANDWIDTH, 2664);
 
     // Set white balance
@@ -352,12 +352,9 @@ int main(int argc, char** argv) {
         } else {
             asprintf(&log_msg, "Loading texture...\n");
             Log(TRACE, log_msg);
-            texture = LoadTextureFromImage(rl_img);
-            // Experimental
             for (size_t i = 0; i < ndevices; ++i) {
                 textures[i] = LoadTextureFromImage(rl_img);
             }
-            // END Experimental
             got_first = true;
             asprintf(&log_msg, "Texture loaded\n");
             Log(TRACE, log_msg);
