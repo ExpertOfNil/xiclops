@@ -1,0 +1,15 @@
+@echo off
+
+mkdir build
+pushd build
+cl -Zi -DWIN32 -D_WIN32 -DNOGDI -DNOUSER -O3 ^
+-Iinclude -I..\raylib\raylib-5.5_winx64_msvc16\include ^
+-I..\xiAPI ^
+..\src\main.c ^
+user32.lib winmm.lib gdi32.lib msvcrt.lib shell32.lib ^
+raylib.lib xiapi64.lib ^
+-link -libpath:..\raylib\raylib-5.5_winx64_msvc16\lib ^
+-libpath:..\xiAPI ^
+-NODEFAULTLIB:libcmt ^
+-out:xiclops.exe
+popd

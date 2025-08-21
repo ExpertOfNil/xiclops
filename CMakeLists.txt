@@ -10,6 +10,9 @@ set(
 )
 
 set(CMAKE_CXX_FLAGS "-Wall" "-Wextra" "-ggdb")
+
+file(GLOB_RECURSE SOURCES RELATIVE ${CMAKE_SOURCE_DIR} "src/*.c")
+
 include_directories(
     src
 	include
@@ -17,9 +20,6 @@ include_directories(
     /opt/XIMEA/include
     raylib/raylib-5.0_linux_amd64/include
 )
-
-
-file(GLOB_RECURSE SOURCES RELATIVE ${CMAKE_SOURCE_DIR} "src/*.c")
 
 link_directories(${CMAKE_SOURCE_DIR}/raylib/raylib-5.0_linux_amd64/lib)
 
