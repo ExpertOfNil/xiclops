@@ -21,7 +21,7 @@ include_directories(
     raylib/raylib-5.0_linux_amd64/include
 )
 
-link_directories(${CMAKE_SOURCE_DIR}/raylib/raylib-5.0_linux_amd64/lib)
+link_directories(${CMAKE_SOURCE_DIR}/raylib/raylib-5.0_linux_amd64)
 
 add_executable(${PROJECT_NAME}
   ${SOURCES}
