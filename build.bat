@@ -14,3 +14,5 @@ raylib.lib xiapi64.lib ^
 -NODEFAULTLIB:libcmt ^
 -out:xiclops.exe
 popd
+
+xcopy lib\xiAPI\xiapi64.dll build /d
